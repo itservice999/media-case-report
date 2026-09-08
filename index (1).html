@@ -1,0 +1,1161 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Media Case Report — สถิติการส่งสื่อ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --ink:#152238;
+    --ink-2:#2A3A56;
+    --paper:#F6F4EE;
+    --paper-2:#EDEADF;
+    --card:#FFFFFF;
+    --line:#DED9C8;
+    --amber:#C8871A;
+    --amber-deep:#9C6712;
+    --green:#2E7D5B;
+    --red:#B23A48;
+    --muted:#7B7565;
+    --radius:10px;
+    --shadow:0 1px 2px rgba(21,34,56,.06), 0 6px 20px rgba(21,34,56,.05);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:'Sarabun',system-ui,sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit;}
+  button{font-family:inherit;}
+
+  #app{display:flex; min-height:100vh;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:236px; flex:none;
+    background:var(--ink);
+    color:#EDE9DC;
+    display:flex; flex-direction:column;
+    padding:26px 18px;
+    position:sticky; top:0; height:100vh;
+  }
+  .brand{
+    font-weight:700; font-size:19px; letter-spacing:.2px;
+    color:#fff; margin-bottom:2px;
+  }
+  .brand-sub{
+    font-size:12.5px; color:#B9B3A0; margin-bottom:30px;
+  }
+  .nav{display:flex; flex-direction:column; gap:4px;}
+  .nav-btn{
+    display:flex; align-items:center; gap:10px;
+    text-align:left; background:transparent; border:none;
+    color:#D8D3C4; padding:10px 12px; border-radius:8px;
+    cursor:pointer; font-size:15px; transition:background .15s, color .15s;
+  }
+  .nav-btn:hover{background:rgba(255,255,255,.06); color:#fff;}
+  .nav-btn.active{background:var(--amber); color:#1B1200; font-weight:600;}
+  .nav-dot{width:6px; height:6px; border-radius:50%; background:currentColor; opacity:.55; flex:none;}
+  .sidebar-foot{
+    margin-top:auto; font-size:12px; color:#8B856F; line-height:1.6;
+    border-top:1px solid rgba(255,255,255,.1); padding-top:14px;
+  }
+
+  /* ---------- Main ---------- */
+  main{flex:1; padding:34px 40px; max-width:1180px;}
+  .page-head{margin-bottom:26px;}
+  .page-head h1{font-size:24px; margin:0 0 4px; font-weight:700;}
+  .page-head p{margin:0; color:var(--muted); font-size:14.5px;}
+
+  .view{display:none;}
+  .view.active{display:block;}
+
+  /* ---------- Dashboard ---------- */
+  .stat-row{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px;}
+  .stat-card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 20px; min-width:150px; flex:1; box-shadow:var(--shadow);
+  }
+  .stat-card .num{font-size:30px; font-weight:700; color:var(--ink); line-height:1.1;}
+  .stat-card .lbl{font-size:13px; color:var(--muted); margin-top:6px;}
+  .stat-card.hero{
+    background:var(--ink); color:#fff; border:none;
+  }
+  .stat-card.hero .num{color:#fff;}
+  .stat-card.hero .lbl{color:#B9B3A0;}
+
+  .panel{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:22px 24px; margin-bottom:22px; box-shadow:var(--shadow);
+  }
+  .panel h2{font-size:16.5px; margin:0 0 4px; font-weight:600;}
+  .panel .sub{color:var(--muted); font-size:13px; margin:0 0 18px;}
+
+  .rank-row{display:flex; align-items:center; gap:14px; padding:9px 0; border-bottom:1px solid #F0EDE2;}
+  .rank-row:last-child{border-bottom:none;}
+  .rank-pos{width:20px; font-weight:700; color:var(--amber-deep); font-size:14px; flex:none;}
+  .rank-name{width:150px; flex:none; font-weight:600; font-size:14.5px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .rank-bar-track{flex:1; background:var(--paper-2); border-radius:6px; height:14px; overflow:hidden;}
+  .rank-bar-fill{height:100%; background:linear-gradient(90deg, var(--amber-deep), var(--amber)); border-radius:6px;}
+  .rank-count{width:34px; text-align:right; font-weight:700; font-size:14px; flex:none;}
+
+  .two-col{display:grid; grid-template-columns:1.3fr 1fr; gap:22px;}
+  @media (max-width:920px){ .two-col{grid-template-columns:1fr;} main{padding:24px 18px;} #app{flex-direction:column;} .sidebar{width:100%; height:auto; position:relative; flex-direction:row; align-items:center; padding:14px 16px;} .nav{flex-direction:row; flex-wrap:wrap;} .sidebar-foot{display:none;} .brand-sub{display:none;} .brand{margin-bottom:0; margin-right:14px;} }
+
+  .month-toolbar{display:flex; align-items:center; gap:10px; margin-bottom:18px;}
+  .month-toolbar label{font-size:13px; color:var(--muted); font-weight:600;}
+  .month-toolbar select{
+    font-family:inherit; padding:7px 10px; border:1px solid var(--line); border-radius:8px;
+    background:#fff; font-size:14px;
+  }
+  .year-total{margin-left:auto; font-size:13.5px; color:var(--muted);}
+  .year-total strong{color:var(--ink); font-size:16px;}
+  .month-chart{display:flex; align-items:flex-end; gap:8px; height:150px; padding-top:20px;}
+  .month-col{flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%;}
+  .month-count{font-size:11.5px; font-weight:700; color:var(--ink-2); margin-bottom:4px; min-height:14px;}
+  .month-bar{width:100%; max-width:28px; background:linear-gradient(180deg, var(--amber), var(--amber-deep)); border-radius:5px 5px 2px 2px; min-height:3px; transition:height .2s;}
+  .month-label{font-size:11.5px; color:var(--muted); margin-top:7px;}
+
+  .mini-list{display:flex; flex-direction:column; gap:0;}
+  .mini-item{display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid #F0EDE2; font-size:14px;}
+  .mini-item:last-child{border-bottom:none;}
+  .badge{
+    display:inline-block; font-size:12px; padding:2px 9px; border-radius:20px;
+    background:var(--paper-2); color:var(--ink-2); font-weight:600;
+  }
+  .badge.p1{background:#F8E2E2; color:var(--red);}
+  .badge.p2{background:#FBEBD2; color:var(--amber-deep);}
+  .badge.p3{background:#E4EEE6; color:var(--green);}
+  .badge.done{background:#E4EEE6; color:var(--green);}
+  .badge.progress{background:#FBEBD2; color:var(--amber-deep);}
+  .badge.pending{background:#EEECE3; color:var(--muted);}
+  .badge.cancel{background:#F8E2E2; color:var(--red);}
+
+  /* ---------- Form ---------- */
+  .form-grid{display:grid; grid-template-columns:1fr 1fr; gap:16px 20px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field.full{grid-column:1/-1;}
+  .field label{font-size:13px; color:var(--muted); font-weight:600;}
+  .field input, .field select, .field textarea{
+    font-family:inherit; font-size:14.5px; padding:9px 11px;
+    border:1px solid var(--line); border-radius:8px; background:#FDFCF9; color:var(--ink);
+  }
+  .field textarea{resize:vertical; min-height:64px;}
+  .field input:focus, .field select:focus, .field textarea:focus{
+    outline:none; border-color:var(--amber-deep); background:#fff;
+  }
+  .form-actions{display:flex; gap:10px; margin-top:22px;}
+  .btn{
+    border:none; border-radius:8px; padding:10px 18px; font-size:14.5px; font-weight:600;
+    cursor:pointer; transition:transform .05s, opacity .15s;
+  }
+  .btn:active{transform:scale(.98);}
+  .btn-primary{background:var(--ink); color:#fff;}
+  .btn-primary:hover{background:var(--ink-2);}
+  .btn-amber{background:var(--amber); color:#1B1200;}
+  .btn-amber:hover{opacity:.9;}
+  .btn-ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+  .btn-ghost:hover{background:var(--paper-2);}
+  .btn-danger{background:#FBEAEA; color:var(--red);}
+  .btn-danger:hover{background:#F6D9D9;}
+  .btn-sm{padding:6px 11px; font-size:13px; border-radius:6px;}
+
+  /* ---------- List / table ---------- */
+  .list-toolbar{display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center;}
+  .list-toolbar input, .list-toolbar select{
+    font-family:inherit; padding:8px 11px; border:1px solid var(--line); border-radius:8px;
+    background:#fff; font-size:14px;
+  }
+  .list-toolbar input[type="search"]{flex:1; min-width:180px;}
+
+  .bulk-bar{display:flex; align-items:center; gap:14px; margin-bottom:12px; min-height:30px;}
+  .select-all-label{
+    display:flex; align-items:center; gap:7px; font-size:14px; font-weight:600;
+    color:var(--ink-2); cursor:pointer; user-select:none;
+  }
+  .select-all-label input[type="checkbox"]{width:16px; height:16px; cursor:pointer; accent-color:var(--amber-deep);}
+  .row-cb{width:16px; height:16px; cursor:pointer; accent-color:var(--amber-deep);}
+  table{width:100%; border-collapse:collapse; font-size:13.6px;}
+  #table-wrap{overflow-x:auto;}
+  thead th{
+    text-align:left; font-size:12.5px; color:var(--muted); font-weight:600;
+    padding:8px 10px; border-bottom:2px solid var(--line); white-space:nowrap;
+  }
+  tbody td{padding:9px 10px; border-bottom:1px solid #F0EDE2; vertical-align:top;}
+  td.cell-media{max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  tbody tr:hover{background:#FBFAF5;}
+  .row-actions{display:flex; gap:6px;}
+  .empty-state{
+    text-align:center; padding:50px 20px; color:var(--muted);
+  }
+  .empty-state .big{font-size:38px; margin-bottom:8px;}
+
+  /* ---------- Detail (AppSheet-style) ---------- */
+  .detail-overlay{
+    position:fixed; inset:0; background:rgba(21,34,56,.45);
+    display:none; align-items:flex-start; justify-content:center;
+    padding:40px 16px; overflow:auto; z-index:50;
+  }
+  .detail-overlay.active{display:flex;}
+  .detail-card{
+    background:#fff; border-radius:14px; width:100%; max-width:560px;
+    padding:0; box-shadow:0 20px 60px rgba(0,0,0,.25); overflow:hidden;
+  }
+  .detail-head{
+    background:var(--ink); color:#fff; padding:20px 24px; display:flex; justify-content:space-between; align-items:flex-start;
+  }
+  .detail-head h3{margin:0 0 4px; font-size:18px;}
+  .detail-head p{margin:0; color:#B9B3A0; font-size:13px;}
+  .detail-close{background:none; border:none; color:#B9B3A0; font-size:20px; cursor:pointer; line-height:1;}
+  .detail-body{padding:8px 24px 22px; max-height:70vh; overflow:auto;}
+  .dfield{padding:12px 0; border-bottom:1px solid #F0EDE2;}
+  .dfield:last-child{border-bottom:none;}
+  .dfield .k{font-size:12.5px; color:var(--muted); margin-bottom:3px;}
+  .dfield .v{font-size:15px; color:var(--ink); font-weight:500; white-space:pre-wrap; word-break:break-word;}
+  .dfield .v a{color:var(--amber-deep); text-decoration:underline;}
+
+  /* ---------- Import/Export ---------- */
+  .drop{
+    border:2px dashed var(--line); border-radius:12px; padding:34px; text-align:center;
+    color:var(--muted); cursor:pointer; background:#FDFCF9; transition:border-color .15s, background .15s;
+  }
+  .drop.drag{border-color:var(--amber-deep); background:#FBF3E4;}
+  .drop input{display:none;}
+  .drop .icon{font-size:30px; margin-bottom:8px;}
+  .io-actions{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;}
+  .col-check-grid{display:grid; grid-template-columns:1fr 1fr; gap:6px 18px; margin-top:10px; font-size:13.5px;}
+  code{background:var(--paper-2); padding:1px 6px; border-radius:4px; font-size:.9em;}
+  .toast{
+    position:fixed; bottom:24px; right:24px; background:var(--ink); color:#fff;
+    padding:12px 18px; border-radius:8px; font-size:14px; box-shadow:var(--shadow);
+    opacity:0; transform:translateY(8px); transition:opacity .2s, transform .2s; pointer-events:none; z-index:100;
+  }
+  .toast.show{opacity:1; transform:translateY(0);}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <aside class="sidebar">
+    <div class="brand">Media Case Report</div>
+    <div class="brand-sub">สถิติการส่งสื่อลูกค้า</div>
+    <nav class="nav">
+      <button class="nav-btn active" data-view="dashboard"><span class="nav-dot"></span>ภาพรวม / สถิติ</button>
+      <button class="nav-btn" data-view="form"><span class="nav-dot"></span>บันทึกเคสใหม่</button>
+      <button class="nav-btn" data-view="list"><span class="nav-dot"></span>รายการทั้งหมด</button>
+      <button class="nav-btn" data-view="io"><span class="nav-dot"></span>นำเข้า / ส่งออก Excel</button>
+    </nav>
+    <div class="sidebar-foot">
+      ข้อมูลถูกบันทึกไว้ในเบราว์เซอร์นี้ (localStorage)<br/>
+      แนะนำให้กด "ส่งออก Excel" เก็บสำรองเป็นระยะ
+    </div>
+  </aside>
+
+  <main>
+
+    <!-- ============ DASHBOARD ============ -->
+    <section class="view active" id="view-dashboard">
+      <div class="page-head">
+        <h1>ภาพรวมการส่งสื่อ</h1>
+        <p>สรุปสถิติภาพรวมการส่งสื่อทั้งหมด</p>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-card hero">
+          <div class="num" id="stat-total">0</div>
+          <div class="lbl">เคสทั้งหมด</div>
+        </div>
+        <div class="stat-card">
+          <div class="num" id="stat-customers">0</div>
+          <div class="lbl">ลูกค้าที่ใช้บริการ</div>
+        </div>
+        <div class="stat-card">
+          <div class="num" id="stat-reporters">0</div>
+          <div class="lbl">ผู้แจ้งทั้งหมด</div>
+        </div>
+        <div class="stat-card">
+          <div class="num" id="stat-thismonth">0</div>
+          <div class="lbl">เคสเดือนนี้</div>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <h2>อันดับการส่งสื่อ</h2>
+          <p class="sub">เรียงตามจำนวนเคสสะสมทั้งหมด แยกตามลูกค้า</p>
+          <div class="rank-list" id="rank-list"></div>
+        </div>
+
+        <div class="panel">
+          <h2>อันดับผู้แจ้ง</h2>
+          <p class="sub">เรียงตามจำนวนเคสสะสมทั้งหมด แยกตามผู้แจ้ง</p>
+          <div class="rank-list" id="reporter-rank-list"></div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>ประเภทจอ</h2>
+        <p class="sub">ประเภทจอ/สื่อที่พบบ่อย</p>
+        <div class="mini-list" id="jobtype-list"></div>
+      </div>
+
+      <div class="panel">
+        <h2>สถิติรายเดือน / รายปี</h2>
+        <p class="sub">จำนวนเคสที่รับแจ้งในแต่ละเดือน นับตามวันที่รับแจ้งงาน</p>
+        <div class="month-toolbar">
+          <label for="stat-year-select">ปี</label>
+          <select id="stat-year-select"></select>
+          <span class="year-total" id="year-total-lbl"></span>
+        </div>
+        <div class="month-chart" id="month-chart"></div>
+
+        <h2 style="margin-top:26px;">สรุปรายปี</h2>
+        <div class="mini-list" id="year-list"></div>
+      </div>
+    </section>
+
+    <!-- ============ FORM ============ -->
+    <section class="view" id="view-form">
+      <div class="page-head">
+        <h1 id="form-title">บันทึกเคสใหม่</h1>
+        <p>กรอกด้วยมือได้ง่ายขึ้น — ช่องที่เคยกรอกไว้จะขึ้นให้เลือกอัตโนมัติ</p>
+      </div>
+
+      <div class="panel">
+        <form id="case-form">
+          <div class="form-grid">
+            <div class="field">
+              <label>ลูกค้า (Customer)</label>
+              <input list="dl-customer" name="customer" required placeholder="เช่น True, Dior, Popmart" />
+              <datalist id="dl-customer"></datalist>
+            </div>
+            <div class="field">
+              <label>ID</label>
+              <input name="clientId" placeholder="เช่น ce59ee71" />
+            </div>
+
+            <div class="field">
+              <label>เลขที่ติดตามงาน</label>
+              <input name="trackingNo" placeholder="เช่น TRU005297" />
+            </div>
+            <div class="field">
+              <label>ความสำคัญ</label>
+              <select name="priority">
+                <option value="">— เลือก —</option>
+                <option>P1</option><option>P2</option><option>P3</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>ผู้แจ้ง</label>
+              <input list="dl-reporter" name="reporter" placeholder="ชื่อผู้แจ้งงาน" />
+              <datalist id="dl-reporter"></datalist>
+            </div>
+            <div class="field">
+              <label>วันเวลาที่รับแจ้ง</label>
+              <input type="datetime-local" name="receivedAt" />
+            </div>
+
+            <div class="field">
+              <label>สถานที่ / สาขา</label>
+              <input list="dl-branch" name="branch" placeholder="เช่น สำนักงานใหญ่" />
+              <datalist id="dl-branch"></datalist>
+            </div>
+            <div class="field">
+              <label>ประเภทงาน</label>
+              <input list="dl-jobtype" name="jobType" placeholder="เช่น LED Display" />
+              <datalist id="dl-jobtype"></datalist>
+            </div>
+
+            <div class="field full">
+              <label>ข้อมูลสื่อ (ลิงก์สื่อใหม่ / รายละเอียด)</label>
+              <textarea name="mediaInfo" placeholder="วางลิงก์ Google Drive หรือรายละเอียดสื่อที่นี่"></textarea>
+            </div>
+
+            <div class="field">
+              <label>วันที่กำหนดส่งสื่อ</label>
+              <input type="date" name="dueDate" />
+            </div>
+            <div class="field">
+              <label>วันหมดอายุสื่อ</label>
+              <input type="date" name="expireDate" />
+            </div>
+
+            <div class="field">
+              <label>สถานะงาน</label>
+              <select name="status">
+                <option value="">— เลือก —</option>
+                <option value="รอดำเนินการ">รอดำเนินการ</option>
+                <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+                <option value="เรียบร้อย">เรียบร้อย</option>
+                <option value="ยกเลิก">ยกเลิก</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>ผู้ดำเนินการ</label>
+              <input list="dl-operator" name="operator" placeholder="ชื่อผู้ดำเนินการ" />
+              <datalist id="dl-operator"></datalist>
+            </div>
+
+            <div class="field full">
+              <label>รายละเอียดการดำเนินการ</label>
+              <textarea name="details" placeholder="บันทึกความคืบหน้าในการดำเนินงาน"></textarea>
+            </div>
+
+            <div class="field full">
+              <label>หมายเหตุ</label>
+              <textarea name="remarks" placeholder="หมายเหตุเพิ่มเติม"></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary" id="form-submit-btn">บันทึกเคส</button>
+            <button type="button" class="btn btn-ghost" id="form-reset-btn">ล้างฟอร์ม</button>
+          </div>
+          <input type="hidden" name="_editId" />
+        </form>
+      </div>
+    </section>
+
+    <!-- ============ LIST ============ -->
+    <section class="view" id="view-list">
+      <div class="page-head">
+        <h1>รายการเคสทั้งหมด</h1>
+        <p>ค้นหา กรอง และดูรายละเอียดแบบเดียวกับ App Sheet ได้โดยคลิกที่แถว</p>
+      </div>
+
+      <div class="panel">
+        <div class="list-toolbar">
+          <input type="search" id="search-box" placeholder="ค้นหา ลูกค้า / เลขติดตามงาน / ผู้แจ้ง..." />
+          <select id="filter-customer"><option value="">ลูกค้าทั้งหมด</option></select>
+          <select id="filter-status">
+            <option value="">สถานะทั้งหมด</option>
+            <option value="รอดำเนินการ">รอดำเนินการ</option>
+            <option value="กำลังดำเนินการ">กำลังดำเนินการ</option>
+            <option value="เรียบร้อย">เรียบร้อย</option>
+            <option value="ยกเลิก">ยกเลิก</option>
+          </select>
+        </div>
+
+        <div class="bulk-bar">
+          <label class="select-all-label">
+            <input type="checkbox" id="select-all-cb" />
+            เลือกทั้งหมด
+          </label>
+          <button class="btn btn-danger btn-sm" id="bulk-delete-btn" style="display:none;">
+            ลบรายการที่เลือก (<span id="bulk-count">0</span>)
+          </button>
+        </div>
+
+        <div id="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:30px;"></th>
+                <th>ลูกค้า</th><th>ผู้แจ้ง</th><th>วันที่ได้รับแจ้ง</th><th>เลขติดตามงาน</th>
+                <th>ความสำคัญ</th><th>สถานที่/สาขา</th><th>ประเภทจอ</th>
+                <th>ข้อมูลสื่อ</th><th>กำหนดส่ง</th><th>สถานะ</th><th>ผู้ดำเนินการ</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="table-body"></tbody>
+          </table>
+          <div class="empty-state" id="empty-state" style="display:none;">
+            <div class="big">🗂️</div>
+            ยังไม่มีข้อมูล — เริ่มบันทึกเคสใหม่ หรือ นำเข้าไฟล์ Excel
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ IMPORT/EXPORT ============ -->
+    <section class="view" id="view-io">
+      <div class="page-head">
+        <h1>นำเข้า / ส่งออก Excel</h1>
+        <p>นำเข้าไฟล์ .xlsx / .csv ที่ export มาจาก App Sheet ได้โดยตรง</p>
+      </div>
+
+      <div class="panel">
+        <h2>นำเข้าไฟล์ Excel</h2>
+        <p class="sub">รองรับหัวตารางภาษาไทยแบบเดียวกับ App Sheet เช่น "ลูกค้า", "เลขที่ติดตามงาน", "ความสำคัญ" ฯลฯ</p>
+        <label class="drop" id="drop-zone">
+          <div class="icon">📄</div>
+          <div><strong>ลากไฟล์มาวาง</strong> หรือคลิกเพื่อเลือกไฟล์ (.xlsx, .xls, .csv)</div>
+          <input type="file" id="file-input" accept=".xlsx,.xls,.csv" />
+        </label>
+        <div id="import-summary" style="margin-top:14px; font-size:14px;"></div>
+        <div class="io-actions">
+          <button class="btn btn-ghost" id="download-template-btn">ดาวน์โหลดไฟล์ต้นแบบ (Template)</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h2>ส่งออกข้อมูล</h2>
+        <p class="sub">ส่งออกทุกเคสที่บันทึกไว้เป็นไฟล์ Excel เพื่อเก็บสำรองหรือแชร์ต่อ</p>
+        <div class="io-actions">
+          <button class="btn btn-amber" id="export-btn">ส่งออกเป็น Excel (.xlsx)</button>
+          <button class="btn btn-danger" id="clear-btn">ล้างข้อมูลทั้งหมด</button>
+        </div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- Detail modal (AppSheet-style stacked view) -->
+<div class="detail-overlay" id="detail-overlay">
+  <div class="detail-card">
+    <div class="detail-head">
+      <div>
+        <h3 id="detail-title">รายละเอียดเคส</h3>
+        <p id="detail-sub"></p>
+      </div>
+      <button class="detail-close" id="detail-close">✕</button>
+    </div>
+    <div class="detail-body" id="detail-body"></div>
+    <div style="padding:0 24px 22px; display:flex; gap:10px;">
+      <button class="btn btn-primary btn-sm" id="detail-edit">แก้ไข</button>
+      <button class="btn btn-danger btn-sm" id="detail-delete">ลบเคสนี้</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STORAGE_KEY = "mediaCaseReport.cases.v1";
+
+  var FIELDS = [
+    {key:"customer", label:"ลูกค้า"},
+    {key:"clientId", label:"ID"},
+    {key:"trackingNo", label:"เลขที่ติดตามงาน"},
+    {key:"priority", label:"ความสำคัญ"},
+    {key:"reporter", label:"ผู้แจ้ง"},
+    {key:"receivedAt", label:"วันเวลาที่รับแจ้ง", type:"datetime"},
+    {key:"branch", label:"สถานที่/สาขา"},
+    {key:"jobType", label:"ประเภทงาน"},
+    {key:"mediaInfo", label:"ข้อมูลสื่อ", type:"long"},
+    {key:"dueDate", label:"วันที่กำหนดส่งสื่อ", type:"date"},
+    {key:"expireDate", label:"วันหมดอายุสื่อ", type:"date"},
+    {key:"status", label:"สถานะงาน"},
+    {key:"operator", label:"ผู้ดำเนินการ"},
+    {key:"details", label:"รายละเอียดการดำเนินการ", type:"long"},
+    {key:"remarks", label:"หมายเหตุ", type:"long"}
+  ];
+
+  // Flexible header aliases for Excel/AppSheet import
+  var HEADER_ALIASES = {
+    "ลูกค้า":"customer","customer":"customer",
+    "id":"clientId","ไอดี":"clientId",
+    "เลขที่ติดตามงาน":"trackingNo","เลขติดตามงาน":"trackingNo","tracking":"trackingNo",
+    "ความสำคัญ":"priority","priority":"priority",
+    "ผู้แจ้ง":"reporter","reporter":"reporter",
+    "วันเวลาที่รับแจ้ง":"receivedAt","วันเวลาที่ับแจ้ง":"receivedAt",
+    "สถานที่/สาขา":"branch","สถานที่":"branch","สาขา":"branch",
+    "ประเภทงาน":"jobType","ประเภทจอ":"jobType",
+    "ข้อมูลสื่อ":"mediaInfo",
+    "วันที่กำหนดส่งสื่อ":"dueDate","วันที่ส่งสื่อ":"dueDate",
+    "วันหมดอายุสื่อ":"expireDate",
+    "สถานะงาน":"status","สถานะ":"status",
+    "ผู้ดำเนินการ":"operator",
+    "รายละเอียดการดำเนินการ":"details","รายละเอียด":"details",
+    "หมายเหตุ":"remarks","note":"remarks","notes":"remarks"
+  };
+
+  var state = { cases: [], editId: null, detailId: null };
+
+  // ---------- storage ----------
+  function load(){
+    try{
+      var raw = localStorage.getItem(STORAGE_KEY);
+      state.cases = raw ? JSON.parse(raw) : [];
+    }catch(e){ state.cases = []; }
+  }
+  function save(){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.cases));
+  }
+  function uid(){
+    return "c_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2,8);
+  }
+
+  // ---------- toast ----------
+  var toastEl = document.getElementById("toast");
+  var toastTimer = null;
+  function toast(msg){
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function(){ toastEl.classList.remove("show"); }, 2400);
+  }
+
+  // ---------- nav ----------
+  var navBtns = document.querySelectorAll(".nav-btn");
+  var views = document.querySelectorAll(".view");
+  navBtns.forEach(function(btn){
+    btn.addEventListener("click", function(){
+      navBtns.forEach(function(b){ b.classList.remove("active"); });
+      btn.classList.add("active");
+      var v = btn.getAttribute("data-view");
+      views.forEach(function(sec){ sec.classList.toggle("active", sec.id === "view-" + v); });
+      if(v === "dashboard") renderDashboard();
+      if(v === "list") renderList();
+      if(v === "form" && !state.editId) resetForm();
+    });
+  });
+  function goTo(view){
+    navBtns.forEach(function(b){ b.classList.toggle("active", b.getAttribute("data-view")===view); });
+    views.forEach(function(sec){ sec.classList.toggle("active", sec.id === "view-" + view); });
+  }
+
+  // ---------- datalists / autofill ----------
+  function uniqueValues(key){
+    var seen = {}, out = [];
+    state.cases.forEach(function(c){
+      var v = (c[key]||"").toString().trim();
+      if(v && !seen[v]){ seen[v]=1; out.push(v); }
+    });
+    return out.sort();
+  }
+  function refreshDatalists(){
+    fillDatalist("dl-customer", uniqueValues("customer"));
+    fillDatalist("dl-reporter", uniqueValues("reporter"));
+    fillDatalist("dl-branch", uniqueValues("branch"));
+    fillDatalist("dl-jobtype", uniqueValues("jobType"));
+    fillDatalist("dl-operator", uniqueValues("operator"));
+    var filterCustomer = document.getElementById("filter-customer");
+    var current = filterCustomer.value;
+    filterCustomer.innerHTML = '<option value="">ลูกค้าทั้งหมด</option>' +
+      uniqueValues("customer").map(function(v){ return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join("");
+    filterCustomer.value = current;
+  }
+  function fillDatalist(id, values){
+    var dl = document.getElementById(id);
+    dl.innerHTML = values.map(function(v){ return '<option value="'+esc(v)+'">'; }).join("");
+  }
+  function esc(s){
+    return (s===undefined||s===null?"":String(s)).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function firstLine(s){
+    if(!s) return "";
+    var line = String(s).split(/\r?\n/)[0].trim();
+    return line || String(s).trim();
+  }
+  function formatDateTime(s){
+    if(!s) return "";
+    var d = new Date(s);
+    if(isNaN(d.getTime())) return s;
+    var pad = function(n){ return n<10 ? "0"+n : ""+n; };
+    var datePart = pad(d.getDate())+"/"+pad(d.getMonth()+1)+"/"+d.getFullYear();
+    var timePart = pad(d.getHours())+":"+pad(d.getMinutes());
+    return datePart + (timePart==="00:00" ? "" : " " + timePart);
+  }
+
+  // ---------- form ----------
+  var form = document.getElementById("case-form");
+  var formTitle = document.getElementById("form-title");
+  var submitBtn = document.getElementById("form-submit-btn");
+
+  function resetForm(){
+    form.reset();
+    form._editId.value = "";
+    state.editId = null;
+    formTitle.textContent = "บันทึกเคสใหม่";
+    submitBtn.textContent = "บันทึกเคส";
+  }
+  document.getElementById("form-reset-btn").addEventListener("click", resetForm);
+
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    var data = {};
+    FIELDS.forEach(function(f){ data[f.key] = form[f.key].value.trim(); });
+    if(!data.customer){ toast("กรุณากรอกชื่อลูกค้า"); return; }
+
+    var editId = form._editId.value;
+    if(editId){
+      var idx = state.cases.findIndex(function(c){ return c.id === editId; });
+      if(idx > -1){
+        data.id = editId;
+        data.createdAt = state.cases[idx].createdAt;
+        state.cases[idx] = data;
+        toast("อัปเดตเคสเรียบร้อย");
+      }
+    } else {
+      data.id = uid();
+      data.createdAt = new Date().toISOString();
+      state.cases.push(data);
+      toast("บันทึกเคสใหม่เรียบร้อย");
+    }
+    save();
+    refreshDatalists();
+    resetForm();
+    renderDashboard();
+    renderList();
+    goTo("list");
+  });
+
+  function loadIntoForm(c){
+    FIELDS.forEach(function(f){ if(form[f.key]) form[f.key].value = c[f.key] || ""; });
+    form._editId.value = c.id;
+    state.editId = c.id;
+    formTitle.textContent = "แก้ไขเคส — " + (c.customer||"");
+    submitBtn.textContent = "บันทึกการแก้ไข";
+    goTo("form");
+  }
+
+  // ---------- dashboard ----------
+  var MONTH_LABELS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
+  var selectedYear = null;
+
+  // ใช้วันที่รับแจ้งงานเป็นหลักในการนับสถิติ (ไม่อ้างอิงวันที่เสร็จสิ้นงาน)
+  function caseDate(c){
+    var raw = c.receivedAt || c.createdAt;
+    if(!raw) return null;
+    var d = new Date(raw);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  function buildRankList(elId, counts, emptyMsg){
+    var ranked = Object.keys(counts).map(function(k){ return {name:k, count:counts[k]}; })
+      .sort(function(a,b){ return b.count - a.count; });
+    var maxCount = ranked.length ? ranked[0].count : 1;
+    var el = document.getElementById(elId);
+    if(!ranked.length){
+      el.innerHTML = '<div class="empty-state" style="padding:20px;">'+emptyMsg+'</div>';
+      return;
+    }
+    el.innerHTML = ranked.slice(0,10).map(function(r, i){
+      var pct = Math.max(6, Math.round((r.count/maxCount)*100));
+      return '<div class="rank-row">' +
+        '<div class="rank-pos">'+(i+1)+'</div>' +
+        '<div class="rank-name" title="'+esc(r.name)+'">'+esc(r.name)+'</div>' +
+        '<div class="rank-bar-track"><div class="rank-bar-fill" style="width:'+pct+'%"></div></div>' +
+        '<div class="rank-count">'+r.count+'</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  function renderDashboard(){
+    var total = state.cases.length;
+    document.getElementById("stat-total").textContent = total;
+
+    var byCustomer = {};
+    state.cases.forEach(function(c){
+      var name = c.customer || "(ไม่ระบุ)";
+      byCustomer[name] = (byCustomer[name]||0) + 1;
+    });
+    document.getElementById("stat-customers").textContent = Object.keys(byCustomer).length;
+
+    var byReporter = {};
+    state.cases.forEach(function(c){
+      var name = c.reporter || "(ไม่ระบุ)";
+      byReporter[name] = (byReporter[name]||0) + 1;
+    });
+    document.getElementById("stat-reporters").textContent = Object.keys(byReporter).length;
+
+    var now = new Date();
+    var thisMonth = state.cases.filter(function(c){
+      var d = caseDate(c);
+      return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
+    }).length;
+    document.getElementById("stat-thismonth").textContent = thisMonth;
+
+    buildRankList("rank-list", byCustomer, "ยังไม่มีข้อมูลเคส");
+    buildRankList("reporter-rank-list", byReporter, "ยังไม่มีข้อมูลผู้แจ้ง");
+
+    var byJobType = {};
+    state.cases.forEach(function(c){
+      var j = c.jobType || "(ไม่ระบุ)";
+      byJobType[j] = (byJobType[j]||0) + 1;
+    });
+    var jobTypeList = document.getElementById("jobtype-list");
+    var jtKeys = Object.keys(byJobType).sort(function(a,b){ return byJobType[b]-byJobType[a]; });
+    jobTypeList.innerHTML = jtKeys.length ? jtKeys.map(function(k){
+      return '<div class="mini-item"><span>'+esc(k)+'</span><span class="badge">'+byJobType[k]+'</span></div>';
+    }).join("") : '<div class="mini-item"><span>ยังไม่มีข้อมูล</span></div>';
+
+    renderYearOptions();
+    renderMonthlyStats();
+    renderYearlyStats();
+  }
+
+  function priorityClass(p){
+    if(p==="P1") return "p1";
+    if(p==="P2") return "p2";
+    if(p==="P3") return "p3";
+    return "";
+  }
+
+  function statusClass(s){
+    if(s==="เรียบร้อย") return "done";
+    if(s==="กำลังดำเนินการ") return "progress";
+    if(s==="ยกเลิก") return "cancel";
+    return "pending";
+  }
+
+  function allYearsPresent(){
+    var years = {};
+    state.cases.forEach(function(c){
+      var d = caseDate(c);
+      if(d) years[d.getFullYear()] = true;
+    });
+    var list = Object.keys(years).map(Number).sort(function(a,b){ return b-a; });
+    if(!list.length) list = [new Date().getFullYear()];
+    return list;
+  }
+
+  function renderYearOptions(){
+    var years = allYearsPresent();
+    var sel = document.getElementById("stat-year-select");
+    var prev = selectedYear;
+    sel.innerHTML = years.map(function(y){ return '<option value="'+y+'">พ.ศ./ปี '+y+'</option>'; }).join("");
+    selectedYear = (prev && years.indexOf(prev) > -1) ? prev : years[0];
+    sel.value = selectedYear;
+  }
+
+  document.getElementById("stat-year-select").addEventListener("change", function(e){
+    selectedYear = Number(e.target.value);
+    renderMonthlyStats();
+  });
+
+  function renderMonthlyStats(){
+    var counts = new Array(12).fill(0);
+    state.cases.forEach(function(c){
+      var d = caseDate(c);
+      if(d && d.getFullYear() === selectedYear) counts[d.getMonth()]++;
+    });
+    var max = Math.max.apply(null, counts.concat([1]));
+    var total = counts.reduce(function(a,b){ return a+b; }, 0);
+    document.getElementById("year-total-lbl").innerHTML = 'รวมทั้งปี <strong>'+total+'</strong> เคส';
+    var chart = document.getElementById("month-chart");
+    chart.innerHTML = counts.map(function(count, i){
+      var pct = Math.max(count ? 6 : 2, Math.round((count/max)*100));
+      return '<div class="month-col">' +
+        '<div class="month-count">'+(count || "")+'</div>' +
+        '<div class="month-bar" style="height:'+pct+'%"></div>' +
+        '<div class="month-label">'+MONTH_LABELS[i]+'</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  function renderYearlyStats(){
+    var byYear = {};
+    state.cases.forEach(function(c){
+      var d = caseDate(c);
+      if(d) byYear[d.getFullYear()] = (byYear[d.getFullYear()]||0) + 1;
+    });
+    var years = Object.keys(byYear).sort(function(a,b){ return b-a; });
+    var el = document.getElementById("year-list");
+    el.innerHTML = years.length ? years.map(function(y){
+      return '<div class="mini-item"><span>ปี '+y+'</span><span class="badge">'+byYear[y]+' เคส</span></div>';
+    }).join("") : '<div class="mini-item"><span>ยังไม่มีข้อมูล</span></div>';
+  }
+  function priorityClass(p){
+    if(p==="P1") return "p1";
+    if(p==="P2") return "p2";
+    if(p==="P3") return "p3";
+    return "";
+  }
+
+  // ---------- list ----------
+  var searchBox = document.getElementById("search-box");
+  var filterCustomer = document.getElementById("filter-customer");
+  var filterStatus = document.getElementById("filter-status");
+  var selectAllCb = document.getElementById("select-all-cb");
+  var bulkDeleteBtn = document.getElementById("bulk-delete-btn");
+  var bulkCountEl = document.getElementById("bulk-count");
+  var selectedIds = {};
+
+  [searchBox, filterCustomer, filterStatus].forEach(function(el){
+    el.addEventListener("input", function(){ selectedIds = {}; renderList(); });
+    el.addEventListener("change", function(){ selectedIds = {}; renderList(); });
+  });
+
+  function currentRows(){
+    var q = searchBox.value.trim().toLowerCase();
+    var fc = filterCustomer.value;
+    var fs = filterStatus.value;
+    return state.cases.filter(function(c){
+      if(fc && c.customer !== fc) return false;
+      if(fs && c.status !== fs) return false;
+      if(q){
+        var hay = [c.customer,c.trackingNo,c.reporter,c.clientId,c.operator].join(" ").toLowerCase();
+        if(hay.indexOf(q) === -1) return false;
+      }
+      return true;
+    }).sort(function(a,b){
+      return (b.createdAt||"").localeCompare(a.createdAt||"");
+    });
+  }
+
+  function updateBulkUI(rows){
+    var selectedCount = Object.keys(selectedIds).length;
+    bulkCountEl.textContent = selectedCount;
+    bulkDeleteBtn.style.display = selectedCount ? "inline-flex" : "none";
+    if(!rows.length){
+      selectAllCb.checked = false;
+      selectAllCb.indeterminate = false;
+      return;
+    }
+    var selectedInView = rows.filter(function(c){ return selectedIds[c.id]; }).length;
+    selectAllCb.checked = selectedInView === rows.length;
+    selectAllCb.indeterminate = selectedInView > 0 && selectedInView < rows.length;
+  }
+
+  selectAllCb.addEventListener("change", function(){
+    var rows = currentRows();
+    if(selectAllCb.checked){
+      rows.forEach(function(c){ selectedIds[c.id] = true; });
+    } else {
+      rows.forEach(function(c){ delete selectedIds[c.id]; });
+    }
+    renderList();
+  });
+
+  bulkDeleteBtn.addEventListener("click", function(){
+    var ids = Object.keys(selectedIds);
+    if(!ids.length) return;
+    if(!confirm("ลบ "+ids.length+" เคสที่เลือกไว้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้")) return;
+    state.cases = state.cases.filter(function(c){ return !selectedIds[c.id]; });
+    selectedIds = {};
+    save();
+    refreshDatalists();
+    renderDashboard();
+    renderList();
+    toast("ลบรายการที่เลือกเรียบร้อย");
+  });
+
+  function renderList(){
+    var rows = currentRows();
+    var tbody = document.getElementById("table-body");
+    var emptyState = document.getElementById("empty-state");
+
+    if(!rows.length){
+      tbody.innerHTML = "";
+      emptyState.style.display = "block";
+      updateBulkUI(rows);
+      return;
+    }
+    emptyState.style.display = "none";
+
+    tbody.innerHTML = rows.map(function(c){
+      var checked = selectedIds[c.id] ? "checked" : "";
+      return '<tr data-id="'+c.id+'" style="cursor:pointer;">' +
+        '<td><input type="checkbox" class="row-cb" data-id="'+c.id+'" '+checked+' /></td>' +
+        '<td><strong>'+esc(c.customer)+'</strong></td>' +
+        '<td>'+esc(c.reporter)+'</td>' +
+        '<td>'+esc(formatDateTime(c.receivedAt))+'</td>' +
+        '<td>'+esc(c.trackingNo)+'</td>' +
+        '<td>'+(c.priority ? '<span class="badge '+priorityClass(c.priority)+'">'+esc(c.priority)+'</span>' : "")+'</td>' +
+        '<td>'+esc(c.branch)+'</td>' +
+        '<td>'+esc(c.jobType)+'</td>' +
+        '<td class="cell-media" title="'+esc(c.mediaInfo)+'">'+esc(firstLine(c.mediaInfo))+'</td>' +
+        '<td>'+esc(c.dueDate)+'</td>' +
+        '<td>'+(c.status ? '<span class="badge '+statusClass(c.status)+'">'+esc(c.status)+'</span>' : "")+'</td>' +
+        '<td>'+esc(c.operator)+'</td>' +
+        '<td><div class="row-actions">' +
+          '<button class="btn btn-ghost btn-sm" data-act="edit" data-id="'+c.id+'">แก้ไข</button>' +
+          '<button class="btn btn-danger btn-sm" data-act="delete" data-id="'+c.id+'">ลบ</button>' +
+        '</div></td>' +
+      '</tr>';
+    }).join("");
+
+    tbody.querySelectorAll("tr").forEach(function(tr){
+      tr.addEventListener("click", function(e){
+        if(e.target.closest("[data-act]")) return;
+        if(e.target.classList.contains("row-cb")) return;
+        openDetail(tr.getAttribute("data-id"));
+      });
+    });
+    tbody.querySelectorAll(".row-cb").forEach(function(cb){
+      cb.addEventListener("click", function(e){ e.stopPropagation(); });
+      cb.addEventListener("change", function(){
+        var id = cb.getAttribute("data-id");
+        if(cb.checked) selectedIds[id] = true; else delete selectedIds[id];
+        updateBulkUI(rows);
+      });
+    });
+    tbody.querySelectorAll('[data-act="edit"]').forEach(function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var c = state.cases.find(function(c){ return c.id === btn.getAttribute("data-id"); });
+        if(c) loadIntoForm(c);
+      });
+    });
+    tbody.querySelectorAll('[data-act="delete"]').forEach(function(btn){
+      btn.addEventListener("click", function(e){
+        e.stopPropagation();
+        var id = btn.getAttribute("data-id");
+        var c = state.cases.find(function(c){ return c.id === id; });
+        deleteCaseById(id, c ? c.customer : "");
+      });
+    });
+
+    updateBulkUI(rows);
+  }
+
+  // ---------- detail modal ----------
+  var overlay = document.getElementById("detail-overlay");
+  function openDetail(id){
+    var c = state.cases.find(function(c){ return c.id === id; });
+    if(!c) return;
+    state.detailId = id;
+    document.getElementById("detail-title").textContent = c.customer || "(ไม่ระบุลูกค้า)";
+    document.getElementById("detail-sub").textContent = [c.trackingNo, c.clientId].filter(Boolean).join(" · ");
+    var body = document.getElementById("detail-body");
+    body.innerHTML = FIELDS.map(function(f){
+      var raw = c[f.key];
+      var val = raw ? esc(raw) : '<span style="color:#B9B3A0;">— ไม่ระบุ —</span>';
+      if(raw && f.key === "mediaInfo"){
+        val = esc(raw).replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+      }
+      return '<div class="dfield"><div class="k">'+f.label+'</div><div class="v">'+val+'</div></div>';
+    }).join("");
+    overlay.classList.add("active");
+  }
+  document.getElementById("detail-close").addEventListener("click", function(){ overlay.classList.remove("active"); });
+  overlay.addEventListener("click", function(e){ if(e.target === overlay) overlay.classList.remove("active"); });
+  document.getElementById("detail-edit").addEventListener("click", function(){
+    var c = state.cases.find(function(c){ return c.id === state.detailId; });
+    overlay.classList.remove("active");
+    if(c) loadIntoForm(c);
+  });
+  function deleteCaseById(id, label){
+    if(!confirm("ลบเคสนี้ใช่หรือไม่? "+(label?'("'+label+'")':"")+" การกระทำนี้ไม่สามารถย้อนกลับได้")) return;
+    state.cases = state.cases.filter(function(c){ return c.id !== id; });
+    delete selectedIds[id];
+    save();
+    refreshDatalists();
+    renderDashboard();
+    renderList();
+    toast("ลบเคสเรียบร้อย");
+  }
+
+  document.getElementById("detail-delete").addEventListener("click", function(){
+    var c = state.cases.find(function(c){ return c.id === state.detailId; });
+    overlay.classList.remove("active");
+    deleteCaseById(state.detailId, c ? c.customer : "");
+  });
+
+  // ---------- import ----------
+  var fileInput = document.getElementById("file-input");
+  var dropZone = document.getElementById("drop-zone");
+  ["dragenter","dragover"].forEach(function(ev){
+    dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.add("drag"); });
+  });
+  ["dragleave","drop"].forEach(function(ev){
+    dropZone.addEventListener(ev, function(e){ e.preventDefault(); dropZone.classList.remove("drag"); });
+  });
+  dropZone.addEventListener("drop", function(e){
+    var f = e.dataTransfer.files[0];
+    if(f) handleFile(f);
+  });
+  fileInput.addEventListener("change", function(e){
+    var f = e.target.files[0];
+    if(f) handleFile(f);
+  });
+
+  function normalizeHeader(h){
+    return (h||"").toString().trim().toLowerCase();
+  }
+  function handleFile(file){
+    var reader = new FileReader();
+    reader.onload = function(e){
+      try{
+        var wb = XLSX.read(e.target.result, {type:"binary", cellDates:true});
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet, {defval:""});
+        importRows(rows);
+      }catch(err){
+        document.getElementById("import-summary").innerHTML =
+          '<span style="color:var(--red);">ไม่สามารถอ่านไฟล์ได้: '+esc(err.message)+'</span>';
+      }
+    };
+    reader.readAsBinaryString(file);
+  }
+
+  function importRows(rows){
+    var added = 0, skipped = 0;
+    rows.forEach(function(row){
+      var mapped = {};
+      Object.keys(row).forEach(function(header){
+        var key = HEADER_ALIASES[header.trim()] || HEADER_ALIASES[normalizeHeader(header)];
+        if(key){
+          var val = row[header];
+          if(val instanceof Date){
+            val = val.toISOString().slice(0,16);
+          }
+          mapped[key] = (val===undefined||val===null) ? "" : String(val).trim();
+        }
+      });
+      if(!mapped.customer){ skipped++; return; }
+      mapped.id = uid();
+      mapped.createdAt = new Date().toISOString();
+      FIELDS.forEach(function(f){ if(mapped[f.key]===undefined) mapped[f.key] = ""; });
+      state.cases.push(mapped);
+      added++;
+    });
+    save();
+    refreshDatalists();
+    renderDashboard();
+    renderList();
+    document.getElementById("import-summary").innerHTML =
+      'นำเข้าสำเร็จ <strong>'+added+'</strong> เคส' + (skipped ? ' (ข้าม '+skipped+' แถวที่ไม่มีชื่อลูกค้า)' : '');
+    toast("นำเข้าข้อมูลเรียบร้อย " + added + " เคส");
+  }
+
+  // ---------- export ----------
+  document.getElementById("export-btn").addEventListener("click", function(){
+    if(!state.cases.length){ toast("ยังไม่มีข้อมูลให้ส่งออก"); return; }
+    var headers = FIELDS.map(function(f){ return f.label; });
+    var data = state.cases.map(function(c){
+      var row = {};
+      FIELDS.forEach(function(f){ row[f.label] = c[f.key] || ""; });
+      return row;
+    });
+    var ws = XLSX.utils.json_to_sheet(data, {header:headers});
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Media Cases");
+    XLSX.writeFile(wb, "media-case-report-" + new Date().toISOString().slice(0,10) + ".xlsx");
+  });
+
+  document.getElementById("download-template-btn").addEventListener("click", function(){
+    var headers = FIELDS.map(function(f){ return f.label; });
+    var sample = {};
+    headers.forEach(function(h){ sample[h] = ""; });
+    var ws = XLSX.utils.json_to_sheet([sample], {header:headers});
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Template");
+    XLSX.writeFile(wb, "media-case-template.xlsx");
+  });
+
+  document.getElementById("clear-btn").addEventListener("click", function(){
+    if(!confirm("ลบข้อมูลทั้งหมดในเบราว์เซอร์นี้ใช่หรือไม่? การกระทำนี้ไม่สามารถย้อนกลับได้")) return;
+    state.cases = [];
+    selectedIds = {};
+    save();
+    refreshDatalists();
+    renderDashboard();
+    renderList();
+    toast("ล้างข้อมูลทั้งหมดแล้ว");
+  });
+
+  // ---------- init ----------
+  load();
+  refreshDatalists();
+  renderDashboard();
+  renderList();
+})();
+</script>
+</body>
+</html>
