@@ -37,6 +37,33 @@
 
   #app{display:flex; min-height:100vh;}
 
+  /* ---------- Lock screen ---------- */
+  #lock-screen{
+    position:fixed; inset:0; z-index:200;
+    background:var(--ink);
+    display:flex; align-items:center; justify-content:center;
+    padding:20px;
+  }
+  #lock-screen.hidden{display:none;}
+  .lock-card{
+    background:#1D2B45; border:1px solid rgba(255,255,255,.08); border-radius:14px;
+    padding:36px 32px; width:100%; max-width:340px; text-align:center;
+    box-shadow:0 20px 60px rgba(0,0,0,.35);
+  }
+  .lock-brand{color:#fff; font-size:20px; font-weight:700; margin-bottom:4px;}
+  .lock-sub{color:#B9B3A0; font-size:13.5px; margin:0 0 20px;}
+  #lock-form{display:flex; flex-direction:column; gap:10px;}
+  #lock-input{
+    font-family:inherit; font-size:15px; padding:11px 13px; border-radius:8px;
+    border:1px solid rgba(255,255,255,.15); background:rgba(255,255,255,.06); color:#fff;
+    text-align:center; letter-spacing:1px;
+  }
+  #lock-input:focus{outline:none; border-color:var(--amber);}
+  #lock-input::placeholder{color:#8B85A0;}
+  #lock-form .btn{width:100%;}
+  .lock-error{color:#F0A0A8; font-size:13px; margin:14px 0 0; display:none;}
+  .lock-error.show{display:block;}
+
   /* ---------- Sidebar ---------- */
   .sidebar{
     width:236px; flex:none;
@@ -241,7 +268,20 @@
 </style>
 </head>
 <body>
-<div id="app">
+
+<div id="lock-screen">
+  <div class="lock-card">
+    <div class="lock-brand">Media Case Report</div>
+    <p class="lock-sub">กรุณาใส่รหัสผ่านทีมเพื่อเข้าใช้งาน</p>
+    <form id="lock-form">
+      <input type="password" id="lock-input" placeholder="รหัสผ่าน" autocomplete="off" />
+      <button type="submit" class="btn btn-amber">เข้าสู่ระบบ</button>
+    </form>
+    <p class="lock-error" id="lock-error">รหัสผ่านไม่ถูกต้อง ลองอีกครั้ง</p>
+  </div>
+</div>
+
+<div id="app" style="display:none;">
 
   <aside class="sidebar">
     <div class="brand">Media Case Report</div>
@@ -254,7 +294,8 @@
     </nav>
     <div class="sidebar-foot">
       ข้อมูลถูกบันทึกไว้ในเบราว์เซอร์นี้ (localStorage)<br/>
-      แนะนำให้กด "ส่งออก Excel" เก็บสำรองเป็นระยะ
+      แนะนำให้กด "ส่งออก Excel" เก็บสำรองเป็นระยะ<br/>
+      <a href="#" id="logout-link" style="color:#D8D3C4; text-decoration:underline; display:inline-block; margin-top:8px;">ออกจากระบบ</a>
     </div>
   </aside>
 
@@ -1151,10 +1192,54 @@
   });
 
   // ---------- init ----------
-  load();
-  refreshDatalists();
-  renderDashboard();
-  renderList();
+  function initApp(){
+    load();
+    refreshDatalists();
+    renderDashboard();
+    renderList();
+  }
+
+  // ---------- shared team password gate ----------
+  // เปลี่ยนรหัสผ่านทีมได้ที่บรรทัดนี้:
+  var APP_PASSWORD = "media2026";
+  var AUTH_KEY = "mediaCaseReport.authed.v1";
+
+  var lockScreen = document.getElementById("lock-screen");
+  var lockForm = document.getElementById("lock-form");
+  var lockInput = document.getElementById("lock-input");
+  var lockError = document.getElementById("lock-error");
+  var appEl = document.getElementById("app");
+
+  function unlockApp(){
+    lockScreen.classList.add("hidden");
+    appEl.style.display = "flex";
+    initApp();
+  }
+
+  if(localStorage.getItem(AUTH_KEY) === "1"){
+    unlockApp();
+  }
+
+  lockForm.addEventListener("submit", function(e){
+    e.preventDefault();
+    if(lockInput.value === APP_PASSWORD){
+      localStorage.setItem(AUTH_KEY, "1");
+      lockError.classList.remove("show");
+      unlockApp();
+    } else {
+      lockError.classList.add("show");
+      lockInput.value = "";
+      lockInput.focus();
+    }
+  });
+
+  document.addEventListener("click", function(e){
+    if(e.target && e.target.id === "logout-link"){
+      e.preventDefault();
+      localStorage.removeItem(AUTH_KEY);
+      location.reload();
+    }
+  });
 })();
 </script>
 </body>
