@@ -107,6 +107,16 @@
 
   /* ---------- Dashboard ---------- */
   .stat-row{display:flex; gap:16px; flex-wrap:wrap; margin-bottom:24px;}
+  .dash-scope-bar{
+    display:flex; align-items:center; gap:10px; margin-bottom:18px;
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:12px 16px; box-shadow:var(--shadow);
+  }
+  .dash-scope-bar label{font-size:13.5px; font-weight:600; color:var(--ink-2);}
+  .dash-scope-bar select{
+    font-family:inherit; padding:8px 11px; border:1px solid var(--line); border-radius:8px;
+    background:#fff; font-size:14px; min-width:220px;
+  }
   .stat-card{
     background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
     padding:18px 20px; min-width:150px; flex:1; box-shadow:var(--shadow);
@@ -202,6 +212,8 @@
     background:#fff; font-size:14px;
   }
   .list-toolbar input[type="search"]{flex:1; min-width:180px;}
+  .filter-date-group{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted);}
+  .filter-date-group input[type="date"]{padding:7px 9px; font-size:13.5px;}
 
   .bulk-bar{display:flex; align-items:center; gap:14px; margin-bottom:12px; min-height:30px;}
   .select-all-label{
@@ -218,6 +230,8 @@
   }
   tbody td{padding:9px 10px; border-bottom:1px solid #F0EDE2; vertical-align:top;}
   td.cell-media{max-width:220px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .row-thumb{width:34px; height:34px; object-fit:cover; border-radius:6px; border:1px solid var(--line); display:block;}
+  .row-thumb-empty{display:flex; align-items:center; justify-content:center; color:#B9B3A0; background:var(--paper-2); font-size:12px;}
   tbody tr:hover{background:#FBFAF5;}
   .row-actions{display:flex; gap:6px;}
   .empty-state{
@@ -307,6 +321,11 @@
       <div class="page-head">
         <h1>ภาพรวมการส่งสื่อ</h1>
         <p>สรุปสถิติภาพรวมการส่งสื่อทั้งหมด</p>
+      </div>
+
+      <div class="dash-scope-bar">
+        <label for="dashboard-customer-filter">ดูสถิติเฉพาะลูกค้า</label>
+        <select id="dashboard-customer-filter"><option value="">ลูกค้าทั้งหมด (รวมทุกเจ้า)</option></select>
       </div>
 
       <div class="stat-row">
@@ -455,6 +474,15 @@
               <label>หมายเหตุ</label>
               <textarea name="remarks" placeholder="หมายเหตุเพิ่มเติม"></textarea>
             </div>
+
+            <div class="field full">
+              <label>รูปภาพสื่อ (ถ้ามี)</label>
+              <input type="file" id="image-input" accept="image/*" />
+              <div id="image-preview-wrap" style="display:none; margin-top:8px;">
+                <img id="image-preview" src="" alt="ตัวอย่างรูป" style="max-width:160px; max-height:160px; border-radius:8px; border:1px solid var(--line); display:block;" />
+                <button type="button" class="btn btn-ghost btn-sm" id="image-remove-btn" style="margin-top:6px;">ลบรูปนี้</button>
+              </div>
+            </div>
           </div>
 
           <div class="form-actions">
@@ -462,6 +490,7 @@
             <button type="button" class="btn btn-ghost" id="form-reset-btn">ล้างฟอร์ม</button>
           </div>
           <input type="hidden" name="_editId" />
+          <input type="hidden" name="_currentImageUrl" />
         </form>
       </div>
     </section>
@@ -484,6 +513,15 @@
             <option value="เรียบร้อย">เรียบร้อย</option>
             <option value="ยกเลิก">ยกเลิก</option>
           </select>
+          <select id="filter-jobtype"><option value="">ประเภทจอทั้งหมด</option></select>
+          <select id="filter-operator"><option value="">ผู้ดำเนินการทั้งหมด</option></select>
+          <span class="filter-date-group">
+            <label for="filter-date-from">รับแจ้งตั้งแต่</label>
+            <input type="date" id="filter-date-from" />
+            <label for="filter-date-to">ถึง</label>
+            <input type="date" id="filter-date-to" />
+          </span>
+          <button class="btn btn-ghost btn-sm" id="filter-clear-btn">ล้างตัวกรอง</button>
         </div>
 
         <div class="bulk-bar">
@@ -501,6 +539,7 @@
             <thead>
               <tr>
                 <th style="width:30px;"></th>
+                <th style="width:44px;">รูป</th>
                 <th>ลูกค้า</th><th>ผู้แจ้ง</th><th>วันที่ได้รับแจ้ง</th><th>เลขติดตามงาน</th>
                 <th>ความสำคัญ</th><th>สถานที่/สาขา</th><th>ประเภทจอ</th>
                 <th>ข้อมูลสื่อ</th><th>กำหนดส่ง</th><th>สถานะ</th><th>ผู้ดำเนินการ</th><th></th>
@@ -586,7 +625,7 @@
     priority:"priority", reporter:"reporter", receivedAt:"received_at", branch:"branch",
     jobType:"job_type", mediaInfo:"media_info", dueDate:"due_date", expireDate:"expire_date",
     status:"status", operator:"operator", details:"details", remarks:"remarks",
-    createdAt:"created_at"
+    imageUrl:"image_url", createdAt:"created_at"
   };
   function toDbRow(c){
     var row = {};
@@ -614,7 +653,8 @@
     {key:"status", label:"สถานะงาน"},
     {key:"operator", label:"ผู้ดำเนินการ"},
     {key:"details", label:"รายละเอียดการดำเนินการ", type:"long"},
-    {key:"remarks", label:"หมายเหตุ", type:"long"}
+    {key:"remarks", label:"หมายเหตุ", type:"long"},
+    {key:"imageUrl", label:"รูปภาพสื่อ", type:"image"}
   ];
 
   // Flexible header aliases for Excel/AppSheet import
@@ -693,6 +733,19 @@
     }).catch(function(e){ syncError(e); return false; });
   }
 
+  // ---------- image upload (Supabase Storage) ----------
+  var IMAGE_BUCKET = "media-images";
+
+  function uploadCaseImage(file){
+    var ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    var path = uid() + "." + ext;
+    return db.storage.from(IMAGE_BUCKET).upload(path, file, {upsert:false}).then(function(res){
+      if(res.error){ syncError(res.error); return null; }
+      var pub = db.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      return pub && pub.data ? pub.data.publicUrl : null;
+    }).catch(function(e){ syncError(e); return null; });
+  }
+
   // รีเฟรชข้อมูลจากฐานข้อมูลกลาง แล้ววาดหน้าจอที่กำลังเปิดอยู่ใหม่
   function refreshAndRender(){
     return fetchCases().then(function(){
@@ -751,6 +804,26 @@
     filterCustomer.innerHTML = '<option value="">ลูกค้าทั้งหมด</option>' +
       uniqueValues("customer").map(function(v){ return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join("");
     filterCustomer.value = current;
+
+    var filterJobType = document.getElementById("filter-jobtype");
+    var currentJt = filterJobType.value;
+    filterJobType.innerHTML = '<option value="">ประเภทจอทั้งหมด</option>' +
+      uniqueValues("jobType").map(function(v){ return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join("");
+    filterJobType.value = currentJt;
+
+    var filterOperator = document.getElementById("filter-operator");
+    var currentOp = filterOperator.value;
+    filterOperator.innerHTML = '<option value="">ผู้ดำเนินการทั้งหมด</option>' +
+      uniqueValues("operator").map(function(v){ return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join("");
+    filterOperator.value = currentOp;
+
+    var dashCustomerFilter = document.getElementById("dashboard-customer-filter");
+    if(dashCustomerFilter){
+      var currentDc = dashCustomerFilter.value;
+      dashCustomerFilter.innerHTML = '<option value="">ลูกค้าทั้งหมด (รวมทุกเจ้า)</option>' +
+        uniqueValues("customer").map(function(v){ return '<option value="'+esc(v)+'">'+esc(v)+'</option>'; }).join("");
+      dashCustomerFilter.value = currentDc;
+    }
   }
   function fillDatalist(id, values){
     var dl = document.getElementById(id);
@@ -784,32 +857,45 @@
   function resetForm(){
     form.reset();
     form._editId.value = "";
+    form._currentImageUrl.value = "";
     state.editId = null;
     formTitle.textContent = "บันทึกเคสใหม่";
     submitBtn.textContent = "บันทึกเคส";
+    hideImagePreview();
   }
   document.getElementById("form-reset-btn").addEventListener("click", resetForm);
 
   form.addEventListener("submit", function(e){
     e.preventDefault();
     var data = {};
-    FIELDS.forEach(function(f){ data[f.key] = form[f.key].value.trim(); });
+    FIELDS.forEach(function(f){
+      if(f.type === "image") return; // handled separately below
+      data[f.key] = form[f.key].value.trim();
+    });
     if(!data.customer){ toast("กรุณากรอกชื่อลูกค้า"); return; }
 
     submitBtn.disabled = true;
-    var editId = form._editId.value;
-    var task;
-    if(editId){
-      var existing = state.cases.find(function(c){ return c.id === editId; });
-      data.id = editId;
-      data.createdAt = existing ? existing.createdAt : new Date().toISOString();
-      task = updateCase(editId, data).then(function(ok){ if(ok) toast("อัปเดตเคสเรียบร้อย"); });
-    } else {
-      data.id = uid();
-      data.createdAt = new Date().toISOString();
-      task = insertCase(data).then(function(ok){ if(ok) toast("บันทึกเคสใหม่เรียบร้อย"); });
-    }
-    task.then(function(){
+    var imageFile = document.getElementById("image-input").files[0];
+    var imageTask = imageFile
+      ? uploadCaseImage(imageFile).then(function(url){ return url || form._currentImageUrl.value; })
+      : Promise.resolve(form._currentImageUrl.value);
+
+    imageTask.then(function(imageUrl){
+      data.imageUrl = imageUrl || "";
+      var editId = form._editId.value;
+      var task;
+      if(editId){
+        var existing = state.cases.find(function(c){ return c.id === editId; });
+        data.id = editId;
+        data.createdAt = existing ? existing.createdAt : new Date().toISOString();
+        task = updateCase(editId, data).then(function(ok){ if(ok) toast("อัปเดตเคสเรียบร้อย"); });
+      } else {
+        data.id = uid();
+        data.createdAt = new Date().toISOString();
+        task = insertCase(data).then(function(ok){ if(ok) toast("บันทึกเคสใหม่เรียบร้อย"); });
+      }
+      return task;
+    }).then(function(){
       submitBtn.disabled = false;
       resetForm();
       return refreshAndRender();
@@ -821,11 +907,38 @@
   function loadIntoForm(c){
     FIELDS.forEach(function(f){ if(form[f.key]) form[f.key].value = c[f.key] || ""; });
     form._editId.value = c.id;
+    form._currentImageUrl.value = c.imageUrl || "";
+    document.getElementById("image-input").value = "";
+    if(c.imageUrl){ showImagePreview(c.imageUrl); } else { hideImagePreview(); }
     state.editId = c.id;
     formTitle.textContent = "แก้ไขเคส — " + (c.customer||"");
     submitBtn.textContent = "บันทึกการแก้ไข";
     goTo("form");
   }
+
+  // ---------- image field UI ----------
+  var imagePreviewWrap = document.getElementById("image-preview-wrap");
+  var imagePreviewImg = document.getElementById("image-preview");
+  function showImagePreview(src){
+    imagePreviewImg.src = src;
+    imagePreviewWrap.style.display = "block";
+  }
+  function hideImagePreview(){
+    imagePreviewImg.src = "";
+    imagePreviewWrap.style.display = "none";
+  }
+  document.getElementById("image-input").addEventListener("change", function(e){
+    var file = e.target.files[0];
+    if(!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev){ showImagePreview(ev.target.result); };
+    reader.readAsDataURL(file);
+  });
+  document.getElementById("image-remove-btn").addEventListener("click", function(){
+    document.getElementById("image-input").value = "";
+    form._currentImageUrl.value = "";
+    hideImagePreview();
+  });
 
   // ---------- dashboard ----------
   var MONTH_LABELS = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
@@ -859,26 +972,33 @@
     }).join("");
   }
 
+  function dashboardCases(){
+    var sel = document.getElementById("dashboard-customer-filter");
+    var val = sel ? sel.value : "";
+    return val ? state.cases.filter(function(c){ return c.customer === val; }) : state.cases;
+  }
+
   function renderDashboard(){
-    var total = state.cases.length;
+    var scoped = dashboardCases();
+    var total = scoped.length;
     document.getElementById("stat-total").textContent = total;
 
     var byCustomer = {};
-    state.cases.forEach(function(c){
+    scoped.forEach(function(c){
       var name = c.customer || "(ไม่ระบุ)";
       byCustomer[name] = (byCustomer[name]||0) + 1;
     });
     document.getElementById("stat-customers").textContent = Object.keys(byCustomer).length;
 
     var byReporter = {};
-    state.cases.forEach(function(c){
+    scoped.forEach(function(c){
       var name = c.reporter || "(ไม่ระบุ)";
       byReporter[name] = (byReporter[name]||0) + 1;
     });
     document.getElementById("stat-reporters").textContent = Object.keys(byReporter).length;
 
     var now = new Date();
-    var thisMonth = state.cases.filter(function(c){
+    var thisMonth = scoped.filter(function(c){
       var d = caseDate(c);
       return d && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth();
     }).length;
@@ -888,7 +1008,7 @@
     buildRankList("reporter-rank-list", byReporter, "ยังไม่มีข้อมูลผู้แจ้ง");
 
     var byJobType = {};
-    state.cases.forEach(function(c){
+    scoped.forEach(function(c){
       var j = c.jobType || "(ไม่ระบุ)";
       byJobType[j] = (byJobType[j]||0) + 1;
     });
@@ -902,6 +1022,8 @@
     renderMonthlyStats();
     renderYearlyStats();
   }
+
+  document.getElementById("dashboard-customer-filter").addEventListener("change", renderDashboard);
 
   function priorityClass(p){
     if(p==="P1") return "p1";
@@ -919,7 +1041,7 @@
 
   function allYearsPresent(){
     var years = {};
-    state.cases.forEach(function(c){
+    dashboardCases().forEach(function(c){
       var d = caseDate(c);
       if(d) years[d.getFullYear()] = true;
     });
@@ -944,7 +1066,7 @@
 
   function renderMonthlyStats(){
     var counts = new Array(12).fill(0);
-    state.cases.forEach(function(c){
+    dashboardCases().forEach(function(c){
       var d = caseDate(c);
       if(d && d.getFullYear() === selectedYear) counts[d.getMonth()]++;
     });
@@ -964,7 +1086,7 @@
 
   function renderYearlyStats(){
     var byYear = {};
-    state.cases.forEach(function(c){
+    dashboardCases().forEach(function(c){
       var d = caseDate(c);
       if(d) byYear[d.getFullYear()] = (byYear[d.getFullYear()]||0) + 1;
     });
@@ -985,23 +1107,52 @@
   var searchBox = document.getElementById("search-box");
   var filterCustomer = document.getElementById("filter-customer");
   var filterStatus = document.getElementById("filter-status");
+  var filterJobType = document.getElementById("filter-jobtype");
+  var filterOperator = document.getElementById("filter-operator");
+  var filterDateFrom = document.getElementById("filter-date-from");
+  var filterDateTo = document.getElementById("filter-date-to");
   var selectAllCb = document.getElementById("select-all-cb");
   var bulkDeleteBtn = document.getElementById("bulk-delete-btn");
   var bulkCountEl = document.getElementById("bulk-count");
   var selectedIds = {};
 
-  [searchBox, filterCustomer, filterStatus].forEach(function(el){
+  [searchBox, filterCustomer, filterStatus, filterJobType, filterOperator, filterDateFrom, filterDateTo].forEach(function(el){
     el.addEventListener("input", function(){ selectedIds = {}; renderList(); });
     el.addEventListener("change", function(){ selectedIds = {}; renderList(); });
+  });
+
+  document.getElementById("filter-clear-btn").addEventListener("click", function(){
+    searchBox.value = "";
+    filterCustomer.value = "";
+    filterStatus.value = "";
+    filterJobType.value = "";
+    filterOperator.value = "";
+    filterDateFrom.value = "";
+    filterDateTo.value = "";
+    selectedIds = {};
+    renderList();
   });
 
   function currentRows(){
     var q = searchBox.value.trim().toLowerCase();
     var fc = filterCustomer.value;
     var fs = filterStatus.value;
+    var fjt = filterJobType.value;
+    var fop = filterOperator.value;
+    var dFrom = filterDateFrom.value; // "YYYY-MM-DD" or ""
+    var dTo = filterDateTo.value;
     return state.cases.filter(function(c){
       if(fc && c.customer !== fc) return false;
       if(fs && c.status !== fs) return false;
+      if(fjt && c.jobType !== fjt) return false;
+      if(fop && c.operator !== fop) return false;
+      if(dFrom || dTo){
+        var d = caseDate(c);
+        if(!d) return false;
+        var dStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
+        if(dFrom && dStr < dFrom) return false;
+        if(dTo && dStr > dTo) return false;
+      }
       if(q){
         var hay = [c.customer,c.trackingNo,c.reporter,c.clientId,c.operator].join(" ").toLowerCase();
         if(hay.indexOf(q) === -1) return false;
@@ -1062,8 +1213,12 @@
 
     tbody.innerHTML = rows.map(function(c){
       var checked = selectedIds[c.id] ? "checked" : "";
+      var thumb = c.imageUrl
+        ? '<img src="'+esc(c.imageUrl)+'" alt="" class="row-thumb" />'
+        : '<div class="row-thumb row-thumb-empty">—</div>';
       return '<tr data-id="'+c.id+'" style="cursor:pointer;">' +
         '<td><input type="checkbox" class="row-cb" data-id="'+c.id+'" '+checked+' /></td>' +
+        '<td>'+thumb+'</td>' +
         '<td><strong>'+esc(c.customer)+'</strong></td>' +
         '<td>'+esc(c.reporter)+'</td>' +
         '<td>'+esc(formatDateTime(c.receivedAt))+'</td>' +
@@ -1127,6 +1282,12 @@
     var body = document.getElementById("detail-body");
     body.innerHTML = FIELDS.map(function(f){
       var raw = c[f.key];
+      if(f.type === "image"){
+        var imgVal = raw
+          ? '<a href="'+esc(raw)+'" target="_blank" rel="noopener"><img src="'+esc(raw)+'" alt="รูปภาพสื่อ" style="max-width:100%; max-height:220px; border-radius:8px; border:1px solid #F0EDE2; display:block;" /></a>'
+          : '<span style="color:#B9B3A0;">— ไม่มีรูป —</span>';
+        return '<div class="dfield"><div class="k">'+f.label+'</div><div class="v">'+imgVal+'</div></div>';
+      }
       var val = raw ? esc(raw) : '<span style="color:#B9B3A0;">— ไม่ระบุ —</span>';
       if(raw && f.key === "mediaInfo"){
         val = esc(raw).replace(/(https?:\/\/[^\s]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
