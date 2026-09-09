@@ -213,7 +213,7 @@
   }
   .list-toolbar input[type="search"]{flex:1; min-width:180px;}
   .filter-date-group{display:flex; align-items:center; gap:6px; font-size:13px; color:var(--muted);}
-  .filter-date-group input[type="date"]{padding:7px 9px; font-size:13.5px;}
+  .filter-date-group input[type="date"], .filter-date-group input[type="datetime-local"]{padding:7px 9px; font-size:13.5px;}
 
   .bulk-bar{display:flex; align-items:center; gap:14px; margin-bottom:12px; min-height:30px;}
   .select-all-label{
@@ -518,9 +518,9 @@
           <select id="filter-branch"><option value="">สถานที่/สาขาทั้งหมด</option></select>
           <span class="filter-date-group">
             <label for="filter-date-from">รับแจ้งตั้งแต่</label>
-            <input type="date" id="filter-date-from" />
+            <input type="datetime-local" id="filter-date-from" />
             <label for="filter-date-to">ถึง</label>
-            <input type="date" id="filter-date-to" />
+            <input type="datetime-local" id="filter-date-to" />
           </span>
           <button class="btn btn-ghost btn-sm" id="filter-clear-btn">ล้างตัวกรอง</button>
         </div>
@@ -880,6 +880,7 @@
       data[f.key] = form[f.key].value.trim();
     });
     if(!data.customer){ toast("กรุณากรอกชื่อลูกค้า"); return; }
+    if(data.receivedAt) data.receivedAt = normalizeDateTimeLocal(data.receivedAt);
 
     submitBtn.disabled = true;
     var imageFile = document.getElementById("image-input").files[0];
@@ -954,15 +955,25 @@
   // แปลงข้อความวันที่/เวลาหลายรูปแบบให้เป็น Date object
   // รองรับ: ISO ("2026-07-21T16:08"), แบบที่ Excel/AppSheet ส่งออก ("7/21/2026 4:08:00 PM"),
   // และแบบ D/M/YYYY (ถ้ารูปแบบแรกตีความไม่ได้)
+  // บางอุปกรณ์ (โดยเฉพาะมือถือที่ตั้งค่าเป็นภาษาไทย) จะบันทึกปี พ.ศ. (เช่น 2569)
+  // แทนที่จะเป็น ค.ศ. (2026) ผ่านช่องเลือกวันที่ ฟังก์ชันนี้จะแก้ให้อัตโนมัติ
+  function fixBuddhistYear(d){
+    if(!d) return d;
+    if(d.getFullYear() > 2100){
+      return new Date(d.getFullYear()-543, d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds());
+    }
+    return d;
+  }
+
   function parseFlexibleDate(raw){
     if(!raw) return null;
-    if(raw instanceof Date) return isNaN(raw.getTime()) ? null : raw;
+    if(raw instanceof Date) return isNaN(raw.getTime()) ? null : fixBuddhistYear(raw);
     var str = String(raw).trim();
     if(!str) return null;
 
     // ลองให้ตัว browser parse ตรงๆ ก่อน (ครอบคลุม ISO และ M/D/YYYY h:mm:ss AM/PM ส่วนใหญ่)
     var direct = new Date(str);
-    if(!isNaN(direct.getTime())) return direct;
+    if(!isNaN(direct.getTime())) return fixBuddhistYear(direct);
 
     // รูปแบบ "M/D/YYYY[ h:mm[:ss] AM/PM]" หรือ "D/M/YYYY..."
     var m = str.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:[ ,T]+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM|am|pm)?)?$/);
@@ -978,9 +989,18 @@
       var month = a, day = b;
       if(a > 12 && b <= 12){ month = b; day = a; }
       var d2 = new Date(year, month-1, day, hour, min, sec);
-      if(!isNaN(d2.getTime())) return d2;
+      if(!isNaN(d2.getTime())) return fixBuddhistYear(d2);
     }
     return null;
+  }
+
+  // แปลงค่าจาก <input type="datetime-local"> กลับเป็น "YYYY-MM-DDTHH:MM" ที่แน่ใจว่าเป็นปี ค.ศ. ที่ถูกต้อง
+  // (กันปัญหาบางอุปกรณ์ภาษาไทยบันทึกปี พ.ศ. เช่น 2569 แทน 2026)
+  function normalizeDateTimeLocal(val){
+    var d = parseFlexibleDate(val);
+    if(!d) return val;
+    var pad = function(n){ return n<10 ? "0"+n : ""+n; };
+    return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+"T"+pad(d.getHours())+":"+pad(d.getMinutes());
   }
 
   // ใช้วันที่รับแจ้งงานเป็นหลักในการนับสถิติ (ไม่อ้างอิงวันที่เสร็จสิ้นงาน)
@@ -1178,7 +1198,7 @@
     var fjt = filterJobType.value;
     var fop = filterOperator.value;
     var fbr = filterBranch.value;
-    var dFrom = filterDateFrom.value; // "YYYY-MM-DD" or ""
+    var dFrom = filterDateFrom.value; // "YYYY-MM-DDTHH:MM" or ""
     var dTo = filterDateTo.value;
     return state.cases.filter(function(c){
       if(fc && c.customer !== fc) return false;
@@ -1189,9 +1209,9 @@
       if(dFrom || dTo){
         var d = caseDate(c);
         if(!d) return false;
-        var dStr = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0") + "-" + String(d.getDate()).padStart(2,"0");
-        if(dFrom && dStr < dFrom) return false;
-        if(dTo && dStr > dTo) return false;
+        var t = d.getTime();
+        if(dFrom){ var tFrom = new Date(dFrom).getTime(); if(!isNaN(tFrom) && t < tFrom) return false; }
+        if(dTo){ var tTo = new Date(dTo).getTime(); if(!isNaN(tTo) && t > tTo) return false; }
       }
       if(q){
         var hay = [c.customer,c.trackingNo,c.reporter,c.clientId,c.operator].join(" ").toLowerCase();
