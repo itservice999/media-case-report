@@ -635,7 +635,10 @@
   }
   function fromDbRow(row){
     var c = {};
-    Object.keys(DB_COLUMNS).forEach(function(k){ c[k] = row[DB_COLUMNS[k]]!==undefined ? row[DB_COLUMNS[k]] : ""; });
+    Object.keys(DB_COLUMNS).forEach(function(k){
+      var v = row[DB_COLUMNS[k]];
+      c[k] = (v!==undefined && v!==null) ? (typeof v === "string" ? v.trim() : v) : "";
+    });
     return c;
   }
 
