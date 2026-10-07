@@ -54,7 +54,7 @@ td,th{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-a
 </style>
 </head>
 <body>
-<div id="lock"><form id="lockf"><h2>Media Case Report</h2><label>รหัสผ่านทีม<input id="pw" type="password" autocomplete="off" autocapitalize="none" autocorrect="off"></label><p id="lockerr" class="mute" style="color:var(--danger);margin:6px 0"></p><button class="btn">เข้าสู่ระบบ</button></form></div>
+<div id="lock"><form id="lockf"><h2>Media Case Report</h2><label>รหัสผ่านทีม<input id="pw" type="text" autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false"></label><p id="lockerr" class="mute" style="color:var(--danger);margin:6px 0"></p><button class="btn">เข้าสู่ระบบ</button><p class="mute" style="font-size:12px;margin:10px 0 0">เวอร์ชัน 3 (ระบบสาขา)</p></form></div>
 
 <header><b>Media Case Report</b>
 <nav id="nav">
@@ -143,7 +143,7 @@ const toast=m=>{const t=$('toast');t.textContent=m;t.style.display='block';clear
 const FIELDS=[['customer','ลูกค้า'],['reporter','ผู้แจ้ง'],['tracking_no','เลขที่ติดตามงาน'],['priority','ความสำคัญ'],['received_at','วันเวลาที่รับแจ้ง'],['job_type','ประเภทจอ'],['media_info','ข้อมูลสื่อ'],['due_date','กำหนดส่งสื่อ'],['expire_date','หมดอายุสื่อ'],['status','สถานะงาน'],['operator','ผู้ดำเนินการ'],['details','รายละเอียดการดำเนินการ'],['remarks','หมายเหตุ']];
 
 // ---- lock ----
-function unlock(){$('lock').classList.add('hide');boot()}
+function unlock(){const l=$('lock');l.classList.add('hide');l.style.display='none';boot()}
 if(localStorage.getItem('mcr_ok')==='1')unlock();
 $('lockf').onsubmit=e=>{e.preventDefault();if($('pw').value.trim().toLowerCase()===PASS){localStorage.setItem('mcr_ok','1');unlock()}else $('lockerr').textContent='รหัสผ่านไม่ถูกต้อง'};
 
