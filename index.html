@@ -134,7 +134,7 @@ td,th{text-align:left;padding:8px;border-bottom:1px solid var(--line);vertical-a
 <div id="toast"></div>
 
 <script>
-const SB=supabase.createClient('https://mirjakkcglnmlrycrzzj.supabase.co','sb_publishable_URDSOunoGqhCCjvPRiyXFw_0jmS5TVN');
+let SB;try{SB=supabase.createClient('https://mirjakkcglnmlrycrzzj.supabase.co','sb_publishable_URDSOunoGqhCCjvPRiyXFw_0jmS5TVN')}catch(e){console.error(e)}
 const PASS='media2026';
 const S={cases:[],branches:[],links:[],sel:new Set(),editId:null};
 const $=id=>document.getElementById(id);
@@ -145,7 +145,7 @@ const FIELDS=[['customer','ลูกค้า'],['reporter','ผู้แจ้�
 // ---- lock ----
 function unlock(){$('lock').classList.add('hide');boot()}
 if(localStorage.getItem('mcr_ok')==='1')unlock();
-$('lockf').onsubmit=e=>{e.preventDefault();if($('pw').value.trim()===PASS){localStorage.setItem('mcr_ok','1');unlock()}else $('lockerr').textContent='รหัสผ่านไม่ถูกต้อง'};
+$('lockf').onsubmit=e=>{e.preventDefault();if($('pw').value.trim().toLowerCase()===PASS){localStorage.setItem('mcr_ok','1');unlock()}else $('lockerr').textContent='รหัสผ่านไม่ถูกต้อง'};
 
 // ---- data ----
 async function all(table,order){let out=[],from=0;for(;;){const{data,error}=await SB.from(table).select('*').order(order,{ascending:true}).range(from,from+999);if(error)throw error;out=out.concat(data);if(data.length<1000)break;from+=1000}return out}
